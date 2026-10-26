@@ -1,18 +1,12 @@
 # Hybrid Fraud & Spam Detection Framework
 
-A rule-driven detection framework that flags suspicious review submissions before a human ever opens the queue. SQL enriches each submission with IP intelligence (VPN, proxy, Tor), and a formula-driven rule engine encodes the patterns fake-review submitters are known to follow. The output is a deduplicated, flag-labeled list of review IDs, each with the reason it was flagged.
+A rule-driven detection framework that flags suspicious review submissions before a human ever opens the queue. SQL enriches each submission with additional intelligence, and a formula-driven rule engine encodes the patterns fake-review submitters are known to follow. The output is a deduplicated, flag-labeled list of review IDs, each with the reason it was flagged.
 
-Built for review operations at a high-volume B2B software review platform. **The model deliberately contains no AI or LLM component**: the data it processes is confidential company information, so detection is transparent, auditable, and runs entirely on SQL and spreadsheet logic.
+Built for review content operations at a high-volume B2B software review platform. **The model deliberately contains no AI or LLM component**: the data it processes is confidential company information, so detection is transparent, auditable, and runs entirely on SQL and spreadsheet logic.
 
 ## The problem
 
-Fake reviews on a review platform come from a few recurring sources:
-
-- **Incentivized campaigns:** reviewers paid to submit reviews
-- **Vendor-driven reviews:** a vendor generating positive reviews for its own product
-- **Third-party incentives:** outside organizations rewarding reviewers for submitting
-
-Spotting these manually meant analysts re-learning the same patterns on every batch, with inconsistent results. Manual detection accuracy sat at roughly 72-78%.
+Manual fraud and spam review was slow and inconsistent, creating risk of undetected operational losses from fraudulent/spam reviews. Manual detection accuracy sat at roughly 72-78%.
 
 ## How it works
 
@@ -20,11 +14,11 @@ Spotting these manually meant analysts re-learning the same patterns on every ba
 Raw review data pasted into Input tab
         |
         v
-SQL query: IP intelligence lookup (VPN / proxy / residential proxy / Tor)
+SQL query: Additional intelligence lookup
    -> results pasted back into the workbook
         |
         v
-Formula-driven rule engine (seven detectors)
+Formula-driven rule engine
         |
         v
 Final Output: deduplicated review IDs, with what is suspicious about each
@@ -32,47 +26,37 @@ Final Output: deduplicated review IDs, with what is suspicious about each
 
 Everything after the SQL step is formula-driven. Paste, run, read.
 
-## The seven detectors
+## Detection Signals
 
-| Detector | What it looks for |
-|---|---|
-| Location mismatch | Country the reviewer selected vs. the country implied by their email domain |
-| Probable identity theft | Username patterns typical of throwaway accounts, combined with country or anonymized-IP signals |
-| Odd domain | Non-standard email domain extensions on non-consumer addresses |
-| Educational-domain spam | Educational email domains paired with mismatch signals |
-| Repeated-source pattern | Submission-source signatures historically associated with spam |
-| Sanctioned / high-risk country | Submissions from countries on a maintained risk list |
-| Name-username mismatch | Tiered similarity scoring between reviewer name, username, company and job title |
-
-The exact country, ISP, and domain lists, the scoring thresholds, and the input schema are not published here (see "What is not in this repo").
+Intentionally not published. Detection depends on submitters not knowing what is tracked, so publishing the signals would let bad actors adapt. This repo documents the architecture, design decisions, and validation approach instead.
 
 ## Design decisions
 
 - **No LLM, on purpose.** The input contains confidential company data that cannot be handed to external models. Rule-based logic also makes every flag explainable: each flagged review shows exactly which pattern triggered it.
 - **Formula-driven, so analysts can run it.** No code deployment. A non-technical analyst pastes data, runs one query, and reads the result.
-- **SQL for what formulas cannot do.** IP anonymity status (VPN, proxy, Tor) comes from a lookup that a spreadsheet cannot compute on its own.
 - **Tuned against false positives.** A change log records each rule adjustment made after a pattern over-flagged legitimate reviewers.
 
 ## Results
 
-Detection accuracy improved from a **72-78% manual baseline to 92%**, measured on internal testing data. That data is confidential and is not included, so the figure cannot be independently reproduced from this repo.
+Detection accuracy improved from a **72-78% manual baseline to 92%**, measured on internal testing data. That data is confidential and is not included, so the figure cannot be independently reproduced from this repo. However, the validation approach can be found below.
 
-## What is in this repo
+## Validation Approach
 
-```
-README.md
-docs/
-  architecture.md        Flow and design notes
-  detectors.md           Detector descriptions (no lists or thresholds)
-  change_log.md          False-positive tuning history, generalized
-screenshots/             Sanitized views of the logic tabs
-```
+Accuracy was tested two ways. The results and sample dataset are confidential and not published.
+
+1. **Historical backtest.** The model was run on past reviews that included fraudulent reviews the team had correctly identified and fraudulent reviews the team had missed. It was checked on both: whether it caught what the team caught, and whether it caught what the team missed.
+
+2. **Control batch test.** A fixed set of reviews, including reviews following known spam and fraud patterns, was given to processors for manual review and run through the model, so both could be compared on the same batch.
+
+**Ground truth.** Test cases were clear-cut spam, with unambiguous signs of fraud on proper analysis, not borderline cases.
+
+**False positives.** Some occurred but were low. Because the model produces flags for review, a human makes the final decision on every flagged record.
 
 ## What is not in this repo
 
 - Raw review data and the input column schema
 - Accuracy testing data
-- Country, ISP, and domain watchlists, and exact scoring thresholds
+- Detection Signals and Rule Logic
 - Any internal table names or company-specific identifiers
 
 ## Limitations
@@ -84,7 +68,7 @@ screenshots/             Sanitized views of the logic tabs
 
 ## Stack
 
-SQL, Google Sheets (dynamic-array formulas), IP intelligence lookup.
+SQL, Google Sheets (dynamic-array formulas)
 
 ## Author
 
